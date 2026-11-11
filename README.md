@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Fall Detection System: Step-by-Step Guide
 
 ESP32 wearable + GSM SMS alert + web dashboard
@@ -250,3 +251,6 @@ After changing anything, upload again.
 - This is a student prototype, **not** a certified medical alert device.
 - The dashboard has no login. Use it on a local network only, and change `API_KEY` from the default.
 - Data (events and device status) is stored in `server/data/db.json`. Delete that file to reset history.
+=======
+# Real-Time-Fall-Detection-System
+>>>>>>> 986d7a53909d4b325325cc17518b17ff267091dc
