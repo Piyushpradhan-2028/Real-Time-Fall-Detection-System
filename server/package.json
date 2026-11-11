@@ -1,0 +1,20 @@
+{
+  "name": "fall-detection-server",
+  "version": "1.0.0",
+  "description": "Dashboard + API for the ESP32 fall detection system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "simulate": "node simulate.js",
+    "simulate:fall": "node simulate.js fall",
+    "simulate:cancel": "node simulate.js cancel",
+    "demo": "node server.js --demo"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fall Detection Dashboard</title>
+<style>
+  :root{--bg:#f3f6f9;--card:#fff;--text:#1b2733;--muted:#6b7a89;--line:#e1e7ed;
+        --ok:#1f9d55;--warn:#d98a00;--bad:#d62839;--accent:#2563eb}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0f151b;--card:#18212a;--text:#e8eef3;--muted:#93a3b2;--line:#27323d;--accent:#5b8def}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  h1{font-size:18px;margin:0}
+  .tabs{display:flex;gap:6px}
+  .tabs button{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px}
+  .tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{max-width:960px;margin:0 auto;padding:0 16px 40px;display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .status{display:flex;align-items:center;gap:14px}
+  .dot{width:18px;height:18px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .big{font-size:22px;font-weight:600}
+  .muted{color:var(--muted);font-size:14px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  iframe{width:100%;height:260px;border:0;border-radius:8px;background:var(--line)}
+  a{color:var(--accent)}
+  .bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin:8px 0}
+  .bar>div{height:100%;background:var(--ok);transition:width .4s}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500}
+  .tag{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff}
+  .tag.confirmed{background:var(--bad)} .tag.cancelled{background:var(--warn)}
+  .banner{background:var(--bad);color:#fff;padding:12px 16px;border-radius:10px;font-weight:600}
+  .hidden{display:none}
+  #conn{color:var(--bad);font-size:13px;padding:0 20px}
+  .tablewrap{overflow-x:auto}
+  .btn{border:0;background:var(--accent);color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:14px;margin:0 6px 6px 0}
+  .btn.sec{background:var(--muted)}
+  .btn:disabled{opacity:.5;cursor:default}
+  ol.steps{margin:8px 0 0 18px;padding:0;line-height:1.7;font-size:14px}
+  code{background:var(--line);padding:1px 6px;border-radius:5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Fall Detection Dashboard</h1>
+  <div class="tabs">
+    <button id="tabC" class="active">Emergency contact</button>
+    <button id="tabA">Administrator</button>
+  </div>
+</header>
+<div id="conn"></div>
+
+<main>
+  <div id="banner" class="banner hidden"></div>
+
+  <!-- Emergency contact view (US-05) -->
+  <section id="viewC">
+    <div class="card" style="margin-bottom:14px">
+      <h2>Current status</h2>
+      <div class="status"><span id="cDot" class="dot"></span>
+        <div><div id="cStatus" class="big">Loading...</div><div id="cSub" class="muted"></div></div>
+      </div>
+    </div>
+    <div id="help" class="card hidden" style="margin-bottom:14px">
+      <h2>Why is it empty?</h2>
+      <div class="muted">No device has sent data to this server yet. Pick one of these:</div>
+      <ol class="steps">
+        <li>Click <b>Start demo device</b> below (easiest, no hardware needed), or</li>
+        <li>In a terminal run <code>cd server</code> then <code>npm run simulate</code>, or</li>
+        <li>Power the real ESP32 with <code>SERVER_URL</code> set to this PC's IP address in <code>config.h</code>.</li>
+      </ol>
+      <div class="muted" style="margin-top:8px">Note: the Wokwi simulator cannot send data to this page; it shows its own OLED dashboard.</div>
+    </div>
+    <div class="card">
+      <h2>Last known location</h2>
+      <div id="locText" class="muted" style="margin-bottom:8px">No location yet</div>
+      <iframe id="map" title="Map" class="hidden"></iframe>
+    </div>
+    <div id="demoCard" class="card hidden" style="margin-top:14px">
+      <h2>Demo mode (no hardware)</h2>
+      <div class="muted" style="margin-bottom:10px">Runs a virtual device inside the server so you can try the dashboard.</div>
+      <button class="btn" id="dStart">Start demo device</button>
+      <button class="btn" id="dFall">Simulate fall</button>
+      <button class="btn" id="dCancel">Simulate cancelled alarm</button>
+      <button class="btn sec" id="dStop">Stop demo</button>
+      <div id="dMsg" class="muted"></div>
+    </div>
+  </section>
+
+  <!-- Administrator view (US-06, US-07) -->
+  <section id="viewA" class="hidden">
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="card">
+        <h2>Device</h2>
+        <div class="status"><span id="aDot" class="dot"></span>
+          <div><div id="aOnline" class="big">-</div><div id="aSeen" class="muted"></div></div>
+        </div>
+        <div class="muted" style="margin-top:10px">ID: <b id="aId">-</b> &middot; Wi-Fi: <b id="aRssi">-</b> &middot; GSM: <b id="aGsm">-</b></div>
+      </div>
+      <div class="card">
+        <h2>Battery</h2>
+        <div class="big"><span id="aPct">-</span>%  <span class="muted" id="aVolt"></span></div>
+        <div class="bar"><div id="aBar" style="width:0"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Past fall events</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Time</th><th>Result</th><th>Location</th><th>SMS</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="4" class="muted">No events yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mapsUrl = (la, lo) => `https://www.google.com/maps?q=${la},${lo}`;
+
+function ago(sec){
+  if (sec < 60) return sec + ' s ago';
+  if (sec < 3600) return Math.round(sec / 60) + ' min ago';
+  return Math.round(sec / 3600) + ' h ago';
+}
+
+// ---- tabs ----
+function showTab(a){
+  $('viewC').classList.toggle('hidden', a); $('viewA').classList.toggle('hidden', !a);
+  $('tabC').classList.toggle('active', !a); $('tabA').classList.toggle('active', a);
+}
+$('tabC').onclick = () => showTab(false);
+$('tabA').onclick = () => showTab(true);
+
+let lastMap = '';
+function renderEvents(events){
+  $('rows').innerHTML = events.length ? events.map(e => `
+    <tr>
+      <td>${esc(new Date(e.ts).toLocaleString())}</td>
+      <td><span class="tag ${e.type === 'confirmed' ? 'confirmed' : 'cancelled'}">${e.type === 'confirmed' ? 'Fall confirmed' : 'Cancelled'}</span></td>
+      <td>${e.lat != null ? `<a target="_blank" rel="noopener" href="${mapsUrl(e.lat, e.lon)}">${e.lat.toFixed(5)}, ${e.lon.toFixed(5)}</a>` : 'Unavailable'}</td>
+      <td>${e.type === 'confirmed' ? (e.smsSent ? 'Sent' : 'Failed') : '-'}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="4" class="muted">No events yet</td></tr>';
+}
+
+function render(dev, events){
+  const now = Date.now();
+  renderEvents(events);
+  const recentFall = events.find(e => e.type === 'confirmed' && now - e.ts < 10 * 60 * 1000);
+
+  $('banner').classList.toggle('hidden', !recentFall);
+  if (recentFall) $('banner').textContent = 'FALL CONFIRMED ' + ago(Math.round((now - recentFall.ts) / 1000)) +
+    ' - emergency SMS ' + (recentFall.smsSent ? 'sent' : 'could not be sent');
+
+  $('help').classList.toggle('hidden', !!dev);
+  if (!dev){
+    $('cStatus').textContent = 'Waiting for a device...';
+    $('cSub').textContent = 'Nothing has reported yet';
+    $('cDot').className = 'dot';
+    $('aOnline').textContent = 'No device'; $('aDot').className = 'dot';
+    return;
+  }
+
+  let cls = 'ok', text = 'Monitoring - all OK';
+  if (!dev.online){ cls = 'warn'; text = 'Device offline'; }
+  else if (recentFall || dev.state === 'ALERT_SENT'){ cls = 'bad'; text = 'Fall detected - help needed'; }
+  else if (dev.state === 'COUNTDOWN' || dev.state === 'VERIFYING'){ cls = 'warn'; text = 'Possible fall - checking'; }
+  $('cStatus').textContent = text;
+  $('cDot').className = 'dot ' + cls;
+  $('cSub').textContent = 'Last update ' + ago(dev.secondsAgo);
+
+  const loc = dev.lastLocation;
+  if (loc){
+    $('locText').innerHTML = `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)} (updated ${ago(Math.round((now - loc.at) / 1000))}) &middot; <a target="_blank" rel="noopener" href="${mapsUrl(loc.lat, loc.lon)}">Open in Google Maps</a>`;
+    const d = 0.003;
+    const src = `https://www.openstreetmap.org/export/embed.html?bbox=${loc.lon-d},${loc.lat-d},${loc.lon+d},${loc.lat+d}&layer=mapnik&marker=${loc.lat},${loc.lon}`;
+    if (src !== lastMap){ $('map').src = src; lastMap = src; }
+    $('map').classList.remove('hidden');
+  }
+
+  $('aDot').className = 'dot ' + (dev.online ? 'ok' : 'warn');
+  $('aOnline').textContent = dev.online ? 'Online' : 'Offline';
+  $('aSeen').textContent = 'Last seen ' + ago(dev.secondsAgo);
+  $('aId').textContent = dev.deviceId;
+  $('aRssi').textContent = dev.rssi != null ? dev.rssi + ' dBm' : '-';
+  $('aGsm').textContent = dev.gsmOk ? 'OK' : 'Not responding';
+  const pct = dev.batteryPct ?? 0;
+  $('aPct').textContent = dev.batteryPct ?? '-';
+  $('aVolt').textContent = dev.battery != null ? `(${dev.battery.toFixed(2)} V)` : '';
+  $('aBar').style.width = pct + '%';
+  $('aBar').style.background = pct < 20 ? 'var(--bad)' : pct < 40 ? 'var(--warn)' : 'var(--ok)';
+}
+
+function renderDemo(d){
+  $('demoCard').classList.toggle('hidden', !d || !d.allowed);
+  if (!d || !d.allowed) return;
+  $('dStart').disabled = d.running;
+  $('dStop').disabled = !d.running;
+  $('dFall').disabled = d.busy;
+  $('dCancel').disabled = d.busy;
+}
+
+async function demo(action){
+  $('dMsg').textContent = '';
+  try{
+    const r = await fetch('/api/demo/' + action, { method: 'POST' });
+    if (!r.ok) $('dMsg').textContent = (await r.json()).error || 'Request failed';
+    else if (action === 'fall') $('dMsg').textContent = 'Countdown started... the SMS alert is sent in 10 seconds.';
+    else if (action === 'cancel') $('dMsg').textContent = 'Alarm will be cancelled in a few seconds.';
+  }catch{ $('dMsg').textContent = 'Cannot reach the server'; }
+  load();
+}
+$('dStart').onclick = () => demo('start');
+$('dStop').onclick = () => demo('stop');
+$('dFall').onclick = () => demo('fall');
+$('dCancel').onclick = () => demo('cancel');
+
+async function load(){
+  try{
+    const [s, e] = await Promise.all([
+      fetch('/api/status').then(r => r.json()),
+      fetch('/api/events?limit=50').then(r => r.json())
+    ]);
+    $('conn').textContent = '';
+    renderDemo(s.demo);
+    render(s.devices[0], e.events);
+  }catch(err){
+    $('conn').textContent = 'Cannot reach the server - make sure `npm start` is running. Retrying...';
+  }
+}
+load(); setInterval(load, 3000);
+</script>
+</body>
+</html>

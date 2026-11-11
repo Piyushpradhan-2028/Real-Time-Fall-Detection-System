@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "author": "Piyush Pradhan - Fall Detection System",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-mpu6050", "id": "mpu", "top": 120, "left": 230, "attrs": {} },
+    { "type": "board-ssd1306", "id": "oled", "top": -60, "left": 230, "attrs": { "i2cAddress": "0x3C" } },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": -70, "left": -120, "attrs": { "volume": "0.1" } },
+    { "type": "wokwi-led", "id": "led1", "top": 10, "left": -190, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": 70, "left": -200, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-pushbutton", "id": "btnCancel", "top": 140, "left": -150, "attrs": { "color": "green", "label": "CANCEL" } },
+    { "type": "wokwi-pushbutton", "id": "btnFall", "top": 210, "left": -150, "attrs": { "color": "red", "label": "SIM FALL" } },
+    { "type": "wokwi-pushbutton", "id": "btnSit", "top": 280, "left": -150, "attrs": { "color": "blue", "label": "SIM SIT" } },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": 250, "left": 60, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "mpu:VCC", "esp:3V3", "red", [] ],
+    [ "mpu:GND", "esp:GND.1", "black", [] ],
+    [ "mpu:SCL", "esp:22", "green", [] ],
+    [ "mpu:SDA", "esp:21", "blue", [] ],
+
+    [ "oled:VCC", "esp:3V3", "red", [] ],
+    [ "oled:GND", "esp:GND.1", "black", [] ],
+    [ "oled:SCL", "esp:22", "green", [] ],
+    [ "oled:SDA", "esp:21", "blue", [] ],
+
+    [ "bz1:1", "esp:GND.1", "black", [] ],
+    [ "bz1:2", "esp:25", "orange", [] ],
+
+    [ "r1:1", "esp:26", "green", [] ],
+    [ "r1:2", "led1:A", "green", [] ],
+    [ "led1:C", "esp:GND.1", "black", [] ],
+
+    [ "btnCancel:1.l", "esp:27", "green", [] ],
+    [ "btnCancel:2.l", "esp:GND.1", "black", [] ],
+    [ "btnFall:1.l", "esp:13", "red", [] ],
+    [ "btnFall:2.l", "esp:GND.1", "black", [] ],
+    [ "btnSit:1.l", "esp:14", "blue", [] ],
+    [ "btnSit:2.l", "esp:GND.1", "black", [] ],
+
+    [ "pot1:VCC", "esp:3V3", "red", [] ],
+    [ "pot1:SIG", "esp:34", "purple", [] ],
+    [ "pot1:GND", "esp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}
